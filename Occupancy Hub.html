@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Keterisian Kamar - Kaura Bali</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Plus Jakarta Sans) -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PapaParse untuk membaca CSV live -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        kaura: {
+                            50: '#F5F7F6',     // Soft Sage Wash
+                            100: '#E2EAE6',    // Delicate Sage
+                            200: '#C7D6CE',    // Muted Sage
+                            500: '#527C67',    // Classic Sage Green
+                            600: '#406351',    // Forest Sage
+                            700: '#2E493C',    // Deep Forest Green
+                            800: '#1B2C24',    // Dark Forest Green
+                            900: '#0E1712',    // Rich Midnight Green
+                            gold: '#D4AF37',   // Champagne Gold
+                            goldSoft: '#E6D7B8',
+                            goldHover: '#C49E2D',
+                            sand: '#F7F5F0'    // Warm Sand Light Background
+                        }
+                    },
+                    boxShadow: {
+                        premium: '0 8px 30px -4px rgba(27, 44, 36, 0.04), 0 2px 8px -1px rgba(27, 44, 36, 0.02)',
+                        glow: '0 0 20px rgba(212, 175, 55, 0.25)',
+                        cardHover: '0 20px 40px -10px rgba(27, 44, 36, 0.08)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar mewah */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F7F5F0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #C7D6CE;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #527C67;
+        }
+        /* Smooth fade-in transition */
+        .fade-in-card {
+            animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-kaura-sand text-slate-700 font-sans min-h-screen flex flex-col antialiased">
+
+    <!-- Header Section -->
+    <header class="bg-white/95 backdrop-blur-md text-slate-800 py-4 px-6 sticky top-0 z-50 border-b border-kaura-100 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+            
+            <!-- Logo & Brand Identity -->
+            <div class="flex items-center space-x-4 w-full lg:w-auto justify-between lg:justify-start">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-kaura-500 p-2.5 rounded-2xl shadow-inner text-white">
+                        <!-- Premium Bed/Hotel SVG Icon -->
+                        <svg class="w-6 h-6 text-kaura-goldSoft" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-md sm:text-lg font-extrabold tracking-wider text-kaura-800 flex items-center gap-x-2">
+                            KAURA BALI <span class="text-kaura-500 font-light">| OCCUPANCY HUB</span>
+                        </h1>
+                        <p class="text-[10px] text-slate-400 font-bold tracking-wider uppercase" data-i18n="header-title-sub">Sistem Monitoring Live Kamar & Analitik Visual Kalender</p>
+                    </div>
+                </div>
+                
+                <!-- Small screen language switch -->
+                <div class="lg:hidden flex bg-kaura-50 p-1 rounded-xl border border-kaura-100">
+                    <button onclick="changeLanguage('ID')" id="lang-btn-id-sm" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all duration-300 bg-white text-kaura-700 shadow-sm">ID</button>
+                    <button onclick="changeLanguage('EN')" id="lang-btn-en-sm" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold transition-all duration-300 text-slate-400 hover:text-slate-600">EN</button>
+                </div>
+            </div>
+
+            <!-- Central Widget Area: Live Date/Time Display & Network Status -->
+            <div class="flex flex-wrap items-center justify-center lg:justify-end gap-3 w-full lg:w-auto">
+                
+                <!-- Live System Date Pill (POJOK KANAN ATAS DI HEADER) -->
+                <div class="bg-kaura-50 border border-kaura-100 px-4 py-2 rounded-2xl flex items-center space-x-2 shadow-sm">
+                    <svg class="w-4 h-4 text-kaura-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"></path>
+                    </svg>
+                    <span id="header-date-text" class="text-xs font-extrabold text-kaura-800 tracking-wide">Jumat, 10 Juli 2026</span>
+                </div>
+
+                <!-- Live Sync Controls -->
+                <div class="flex items-center gap-3 bg-kaura-50/50 border border-kaura-100 px-3 py-1.5 rounded-2xl text-xs">
+                    <div class="flex items-center space-x-1.5">
+                        <span id="sync-status" class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-extrabold text-[9px] tracking-wide uppercase">
+                            <span class="w-1.5 h-1.5 mr-1 bg-amber-500 rounded-full animate-pulse"></span>
+                            Connecting...
+                        </span>
+                        <span id="last-updated" class="text-slate-400 font-mono text-[10px]" data-i18n="last-updated">Belum ada data</span>
+                    </div>
+                    
+                    <div class="h-4 w-[1px] bg-kaura-100"></div>
+
+                    <div class="flex items-center space-x-2">
+                        <label class="flex items-center space-x-1.5 cursor-pointer group">
+                            <input type="checkbox" id="auto-refresh-check" checked class="rounded border-kaura-200 text-kaura-500 focus:ring-kaura-500 h-3.5 w-3.5 bg-white">
+                            <span class="text-[10px] text-slate-500 font-semibold group-hover:text-slate-800 transition" data-i18n="auto-refresh-label">Auto (60s)</span>
+                        </label>
+                        <button onclick="fetchData()" class="bg-kaura-500 hover:bg-kaura-600 text-white px-2.5 py-1 rounded-xl font-bold transition shadow-sm flex items-center space-x-1 text-[10px]">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
+                            </svg>
+                            <span data-i18n="refresh-btn">Refresh</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Desktop Language Toggle -->
+                <div class="hidden lg:flex bg-kaura-50 p-1 rounded-2xl border border-kaura-100">
+                    <button onclick="changeLanguage('ID')" id="lang-btn-id" class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all duration-300 bg-white text-kaura-700 shadow-sm">ID</button>
+                    <button onclick="changeLanguage('EN')" id="lang-btn-en" class="px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all duration-300 text-slate-400 hover:text-slate-600">EN</button>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Error Banner -->
+        <div id="error-banner" class="hidden bg-rose-50 border border-rose-200 text-rose-800 px-5 py-4 rounded-3xl flex items-start space-x-3 shadow-sm animate-fade-in">
+            <svg class="w-5 h-5 text-rose-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
+            </svg>
+            <div>
+                <p class="font-bold text-sm">Gagal Mengambil Data CSV</p>
+                <p class="text-xs text-rose-600 mt-0.5" id="error-message">Periksa koneksi internet atau status publikasi Google Sheets Anda.</p>
+            </div>
+        </div>
+
+        <!-- KEY PERFORMANCE INDICATORS (KPIs SUMMARY) -->
+        <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            
+            <!-- KPI 1: Rata-Rata Okupansi -->
+            <div class="bg-white p-5 rounded-3xl border border-kaura-100 shadow-premium flex items-center justify-between transition duration-300 hover:shadow-cardHover">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest" data-i18n="kpi-occupancy-label">Rata-Rata Okupansi</p>
+                    <h3 id="kpi-avg-occupancy" class="text-3xl font-black text-kaura-800 mt-1">0%</h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5 font-medium" data-i18n="kpi-occupancy-sub">Bulan & tahun terpilih</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-kaura-50 text-kaura-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v16.5M21 19.5H3.75M6.75 12l3-3 6 6 4.5-4.5"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- KPI 2: Total Hari Terisi Penuh -->
+            <div class="bg-white p-5 rounded-3xl border border-kaura-100 shadow-premium flex items-center justify-between transition duration-300 hover:shadow-cardHover">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest" data-i18n="kpi-soldout-label">Terisi Penuh (Sold Out)</p>
+                    <h3 id="kpi-soldout-days" class="text-3xl font-black text-rose-600 mt-1">0 Hari</h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5 font-medium" data-i18n="kpi-soldout-sub">Berdasarkan tahun aktif</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-rose-50 text-rose-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286zm0 13.036h.008v.008H12v-.008z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- KPI 3: Kamar Terisi Rata-rata -->
+            <div class="bg-white p-5 rounded-3xl border border-kaura-100 shadow-premium flex items-center justify-between transition duration-300 hover:shadow-cardHover">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest" data-i18n="kpi-sold-label">Kamar Terjual (Rata-Rata)</p>
+                    <h3 id="kpi-avg-sold" class="text-3xl font-black text-amber-600 mt-1">0</h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5 font-medium" data-i18n="kpi-sold-sub">Kamar terjual per hari</p>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-amber-50 text-amber-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"></path>
+                    </svg>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- CONTROLS & SOLD OUT: Top Split Content -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            
+            <!-- PANEL 1: PENYARINGAN UTAMA -->
+            <div class="lg:col-span-4 bg-white rounded-3xl border border-kaura-100 shadow-premium overflow-hidden flex flex-col justify-between transition duration-300 hover:shadow-cardHover">
+                <div class="bg-kaura-50 px-5 py-4 border-b border-kaura-100 flex items-center space-x-2">
+                    <svg class="w-4 h-4 text-kaura-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.562a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z"></path>
+                    </svg>
+                    <h2 class="text-xs font-black text-kaura-800 uppercase tracking-widest" data-i18n="filter-title">Penyaringan Utama</h2>
+                </div>
+                
+                <div class="p-5 space-y-4 bg-white flex-grow">
+                    <!-- Tahun -->
+                    <div class="flex items-center justify-between gap-4">
+                        <label class="text-xs font-bold text-slate-500" data-i18n="label-year">Tahun:</label>
+                        <div class="relative w-44">
+                            <input type="number" id="filter-year" oninput="applyFilters()" placeholder="Contoh: 2026" class="w-full bg-[#FCFBF8] border border-kaura-200 focus:border-kaura-500 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 text-center shadow-inner transition focus:outline-none focus:ring-1 focus:ring-kaura-500">
+                        </div>
+                    </div>
+
+                    <!-- Bulan -->
+                    <div class="flex items-center justify-between gap-4">
+                        <label class="text-xs font-bold text-slate-500" data-i18n="label-month">Bulan:</label>
+                        <div class="relative w-44">
+                            <select id="filter-month" onchange="applyFilters()" class="w-full bg-[#FCFBF8] border border-kaura-200 focus:border-kaura-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 text-center shadow-inner transition focus:outline-none focus:ring-1 focus:ring-kaura-500 cursor-pointer">
+                                <option value="" data-i18n="option-all-months">Semua Bulan</option>
+                                <option value="1">Januari</option>
+                                <option value="2">Februari</option>
+                                <option value="3">Maret</option>
+                                <option value="4">April</option>
+                                <option value="5">Mei</option>
+                                <option value="6">Juni</option>
+                                <option value="7" selected>Juli</option>
+                                <option value="8">Agustus</option>
+                                <option value="9">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Desember</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Filter Kamar Tersedia (<=) -->
+                    <div class="flex items-center justify-between gap-4 pt-2 border-t border-kaura-100">
+                        <label class="text-xs font-bold text-slate-500" data-i18n="label-available">Sisa Kamar Maksimal (&le;):</label>
+                        <div class="relative w-44">
+                            <input type="number" id="filter-available" oninput="applyFilters()" placeholder="Semua sisa kamar" class="w-full bg-[#FCFBF8] border border-kaura-200 focus:border-kaura-500 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-800 text-center shadow-inner transition focus:outline-none focus:ring-1 focus:ring-kaura-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-kaura-50 px-5 py-3.5 border-t border-kaura-100 flex justify-between items-center text-[10px]">
+                    <button onclick="resetFilters()" class="text-kaura-600 hover:text-kaura-800 font-extrabold hover:underline transition ml-auto" data-i18n="reset-btn">Reset Filter</button>
+                </div>
+            </div>
+
+            <!-- PANEL 2: RINGKASAN SOLD OUT (BROUGHT TO THE TOP) -->
+            <div class="lg:col-span-4 bg-white rounded-3xl border border-kaura-100 shadow-premium overflow-hidden flex flex-col justify-between transition duration-300 hover:shadow-cardHover">
+                <div class="bg-gradient-to-r from-rose-700 to-rose-600 text-white px-5 py-4 border-b border-rose-800 flex items-center justify-between shrink-0">
+                    <span class="text-xs font-bold tracking-wider uppercase flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                        <span data-i18n="soldout-panel-title">Terjual Habis (Tahun Aktif)</span>
+                    </span>
+                    <span id="soldout-badge-count" class="bg-white/20 text-white font-extrabold px-2.5 py-0.5 rounded-full text-[10px]">0 Hari</span>
+                </div>
+                
+                <div class="flex-grow overflow-y-auto max-h-[170px] lg:max-h-none h-44 lg:h-auto bg-slate-50/10">
+                    <table class="min-w-full text-xs text-left divide-y divide-slate-100">
+                        <thead class="bg-slate-50 text-slate-500 font-extrabold sticky top-0 uppercase border-b border-slate-200/50 z-10">
+                            <tr>
+                                <th class="px-5 py-2.5 text-[10px] tracking-wider" data-i18n="soldout-table-header-date">Check-in / Tanggal</th>
+                                <th class="px-5 py-2.5 text-right text-[10px] tracking-wider" data-i18n="soldout-table-header-occ">Rasio Okupansi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="soldout-table-body" class="divide-y divide-slate-100 font-semibold text-slate-700">
+                            <!-- JS Rendered -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="bg-slate-50 px-5 py-3 border-t border-slate-100 text-[9px] text-slate-400 italic" data-i18n="soldout-table-footer">
+                    *Merekam tanggal dengan ketersediaan kamar nihil.
+                </div>
+            </div>
+
+            <!-- PANEL 3: INSTRUKSI DAN PANDUAN CEPAT -->
+            <div class="lg:col-span-4 bg-kaura-50 rounded-3xl border border-kaura-100 shadow-premium p-5 flex flex-col justify-between transition duration-300 hover:shadow-cardHover">
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-2 text-kaura-800">
+                        <svg class="w-5 h-5 text-kaura-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 111.063.852l-.708 2.836a.75.75 0 001.063.852l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12v-.008z"></path>
+                        </svg>
+                        <h3 class="text-xs font-black uppercase tracking-widest text-kaura-800" data-i18n="guide-title">Panduan Navigasi</h3>
+                    </div>
+                    <ul class="text-[11px] text-kaura-800/95 list-disc list-inside space-y-2.5 font-medium leading-relaxed pl-1" id="guide-list-ul">
+                        <!-- JS Translated List -->
+                    </ul>
+                </div>
+                <div class="mt-4 pt-3 border-t border-kaura-200/40 flex items-center justify-between text-[9px] text-kaura-700 font-bold">
+                    <span data-i18n="guide-footer-left">*Terintegrasi Real-time</span>
+                    <span class="font-mono">Secure API Connection</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- INTERACTIVE MONTHLY CALENDAR GRID -->
+        <section class="bg-white rounded-3xl border border-kaura-100 shadow-premium overflow-hidden transition duration-300 hover:shadow-cardHover">
+            <div class="bg-gradient-to-r from-kaura-800 to-kaura-700 text-white px-6 py-4.5 border-b border-kaura-900 flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-5 h-5 text-kaura-gold" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"></path>
+                    </svg>
+                    <span id="calendar-header-title" class="text-xs sm:text-sm font-bold tracking-wider uppercase" data-i18n="calendar-title">Visualisasi Kalender Sisa Kamar</span>
+                </div>
+                <!-- Mini Legend -->
+                <div class="flex flex-wrap items-center gap-3 text-[10px] font-bold">
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block border border-white/20"></span> <span data-i18n="calendar-legend-safe">&ge;4 Kamar</span></span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-500 inline-block border border-white/20"></span> <span data-i18n="calendar-legend-limited">1-3 Kamar</span></span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-rose-500 inline-block border border-white/20"></span> <span data-i18n="calendar-legend-soldout">Sold Out</span></span>
+                    <span class="h-3.5 w-[1px] bg-white/20"></span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-200 inline-block border border-slate-300"></span> <span data-i18n="calendar-legend-past">Lampau</span></span>
+                    <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded ring-2 ring-kaura-gold bg-white inline-block"></span> <span data-i18n="calendar-legend-today">Hari Ini</span></span>
+                </div>
+            </div>
+
+            <!-- Calendar Container Grid -->
+            <div class="p-6">
+                <!-- Day of week labels -->
+                <div id="calendar-days-header" class="grid grid-cols-7 gap-2 text-center text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3">
+                    <!-- Dynamic Day Labels JS -->
+                </div>
+                <!-- Actual Calendar Dates Grid -->
+                <div id="calendar-grid" class="grid grid-cols-7 gap-3 mt-4">
+                    <!-- JS Rendered Days -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TWO-COLUMN DETAIL VIEW SPLIT (BOTTOM AREA) -->
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- COLUMN 1: LAPORAN DETAIL KETERISIAN KAMAR TERFILTER -->
+            <div class="lg:col-span-8 bg-white rounded-3xl border border-kaura-100 shadow-premium overflow-hidden flex flex-col h-[460px] transition duration-300 hover:shadow-cardHover">
+                <div class="bg-slate-800 text-white px-5 py-4 border-b border-slate-900 flex items-center justify-between shrink-0">
+                    <span class="text-xs font-bold tracking-wider uppercase flex items-center gap-2">
+                        <svg class="w-4 h-4 text-kaura-gold" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5"></path>
+                        </svg>
+                        <span data-i18n="table-title">Laporan Detail Keterisian Kamar Terfilter</span>
+                    </span>
+                    <span id="filter-badge-count" class="bg-white/20 text-white backdrop-blur-md font-extrabold px-3 py-1 rounded-full text-xs">0 Hari</span>
+                </div>
+
+                <div class="flex-grow overflow-y-auto">
+                    <table class="min-w-full text-xs text-left divide-y divide-slate-100">
+                        <thead class="bg-slate-50 text-slate-500 font-extrabold sticky top-0 uppercase border-b border-slate-200 z-10" id="table-head-row">
+                            <!-- Dynamic translations for table head via JS -->
+                        </thead>
+                        <tbody id="filtered-table-body" class="divide-y divide-slate-100 font-semibold text-slate-700">
+                            <!-- JS Rendered -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- COLUMN 2: ANALISIS DETIL HARIAN -->
+            <div class="lg:col-span-4">
+                <div id="day-detail-card" class="bg-white rounded-3xl border border-kaura-100 shadow-premium overflow-hidden transition duration-300 h-[460px] flex flex-col hover:shadow-cardHover">
+                    <div class="bg-kaura-800 text-white px-5 py-4 border-b border-kaura-900 flex items-center justify-between shrink-0">
+                        <span class="text-xs font-bold tracking-wider uppercase" data-i18n="detail-card-title">Analisis Detil Harian</span>
+                        <span class="text-kaura-gold text-xs font-bold" data-i18n="detail-card-status">Terpilih</span>
+                    </div>
+                    <div class="p-6 flex-grow flex flex-col justify-center" id="day-detail-content">
+                        <!-- Default state dynamic on language switch -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DIAGNOSTIC PANEL -->
+        <section id="debug-panel" class="bg-kaura-900 text-slate-300 rounded-3xl p-6 border border-kaura-800 shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-kaura-800 pb-4">
+                <div class="flex items-center space-x-3">
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono">Pusat Diagnostik Jaringan & Struktur Data</h3>
+                </div>
+                <button onclick="fetchData()" class="px-3 py-1.5 bg-kaura-800 hover:bg-kaura-700 text-slate-200 rounded-xl text-[10px] font-mono transition border border-kaura-700">
+                    Uji Ulang Koneksi
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-[11px] font-mono leading-relaxed">
+                <div class="space-y-2">
+                    <p class="flex items-center gap-2"><span class="text-slate-500">Tautan Aktif:</span> <span id="debug-url" class="text-indigo-300 break-all bg-[#0a0f0c] px-2.5 py-1 rounded-xl border border-kaura-800/40">Memuat...</span></p>
+                    <p class="flex items-center gap-2"><span class="text-slate-500">Total Baris Mentah:</span> <span id="debug-raw-rows" class="text-amber-400 font-bold bg-[#0a0f0c] px-2.5 py-1 rounded-xl border border-kaura-800/40">0 baris</span></p>
+                    <p class="flex items-center gap-2"><span class="text-slate-500">Tahun di File:</span> <span id="debug-years" class="text-emerald-400 font-bold bg-[#0a0f0c] px-2.5 py-1 rounded-xl border border-kaura-800/40">Belum terbaca</span></p>
+                </div>
+                <div class="space-y-2 bg-[#0a0f0c] p-4 rounded-2xl border border-kaura-800/55">
+                    <p class="text-slate-400 border-b border-kaura-800 pb-2 mb-2 font-bold flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        Status Pemetaan Kolom CSV:
+                    </p>
+                    <div class="grid grid-cols-2 gap-y-1">
+                        <span class="text-slate-500">Tanggal:</span> <span id="debug-col-date" class="text-slate-300 font-bold">Mencari...</span>
+                        <span class="text-slate-500">Kapasitas:</span> <span id="debug-col-total" class="text-slate-300 font-bold">Mencari...</span>
+                        <span class="text-slate-500">Terjual:</span> <span id="debug-col-sold" class="text-slate-300 font-bold">Mencari...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-black/40 rounded-2xl p-4 h-32 overflow-y-auto text-[10px] font-mono text-emerald-400 border border-kaura-800" id="debug-logs">
+                [SYSTEM LOG]: Memulai inisialisasi dasbor keterisian kamar Kaura Bali...<br>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-kaura-100 py-5 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400 font-semibold" data-i18n="footer-text">
+            &copy; 2026 Kaura Bali Resort. Aplikasi Pemantau & Dasbor Keterisian Kamar Mandiri Terintegrasi.
+        </div>
+    </footer>
+
+    <!-- Logical Operations & Data Binder -->
+    <script>
+        const rawSourceUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTJtZiEk-SWCuvKz5yuJS_D5YtKm_qvSIo2lgX4nO4LKqbCeLLct3S_wiHocX28Hg/pub?output=csv";
+        
+        // Tanggal Hari Ini Sesuai dengan Waktu Sistem (10 Juli 2026)
+        const TODAY_YEAR = 2026;
+        const TODAY_MONTH = 7;
+        const TODAY_DAY = 10;
+
+        let currentLang = 'ID'; // Default Language
+
+        // Dual-Language Translations Dictionary (Bilingual ID / EN)
+        const i18n = {
+            ID: {
+                "header-title-sub": "Sistem Monitoring Live Kamar & Analitik Visual Kalender",
+                "last-updated": "Belum ada data",
+                "auto-refresh-label": "Auto (60s)",
+                "refresh-btn": "Refresh",
+                "kpi-occupancy-label": "Rata-Rata Okupansi",
+                "kpi-occupancy-sub": "Bulan & tahun terpilih",
+                "kpi-soldout-label": "Terisi Penuh (Sold Out)",
+                "kpi-soldout-sub": "Berdasarkan tahun aktif",
+                "kpi-sold-label": "Kamar Terjual (Rata-Rata)",
+                "kpi-sold-sub": "Kamar terjual per hari",
+                "filter-title": "Penyaringan Utama",
+                "label-year": "Tahun:",
+                "label-month": "Bulan:",
+                "label-available": "Sisa Kamar Maksimal (≤):",
+                "option-all-months": "Semua Bulan",
+                "reset-btn": "Reset Filter",
+                "soldout-panel-title": "Terjual Habis (Tahun Aktif)",
+                "soldout-table-header-date": "Check-in / Tanggal",
+                "soldout-table-header-occ": "Rasio Okupansi",
+                "soldout-table-footer": "*Merekam tanggal dengan ketersediaan kamar nihil.",
+                "guide-title": "Panduan Navigasi",
+                "guide-li-1": "Kalender di bawah menggunakan penanda <strong>Hari Ini (10 Juli 2026)</strong> secara bersinar.",
+                "guide-li-2": "Tanggal lampau (<em>Past</em>) digambarkan berlatar transparan/redup.",
+                "guide-li-3": "<strong>Sandi Sel:</strong> Hijau (&ge;4 kamar aman), Oranye (1-3 kamar terbatas), Merah (Sold Out).",
+                "guide-li-4": "Klik salah satu sel tanggal untuk memunculkan panel detail harian di pojok kanan bawah.",
+                "guide-footer-left": "*Terintegrasi Real-time",
+                "calendar-title": "Visualisasi Kalender Sisa Kamar",
+                "calendar-legend-safe": "≥4 Kamar",
+                "calendar-legend-limited": "1-3 Kamar",
+                "calendar-legend-soldout": "Sold Out",
+                "calendar-legend-past": "Lampau",
+                "calendar-legend-today": "Hari Ini",
+                "table-title": "Laporan Detail Keterisian Kamar Terfilter",
+                "table-header-date": "Check-in / Tanggal",
+                "table-header-cap": "Kapasitas Kamar",
+                "table-header-sold": "Kamar Terjual",
+                "table-header-occ": "Rasio Okupansi",
+                "table-header-avail": "Sisa Kamar (Sedia)",
+                "detail-card-title": "Analisis Detil Harian",
+                "detail-card-status": "Terpilih",
+                "detail-card-empty-title": "Pilih Tanggal di Kalender",
+                "detail-card-empty-desc": "Klik salah satu tanggal pada grid kalender di atas untuk melihat rincian performa penjualan harian.",
+                "footer-text": "© 2026 Kaura Bali Resort. Aplikasi Pemantau & Dasbor Keterisian Kamar Mandiri Terintegrasi.",
+                "month-names": ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
+                "day-names": ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"],
+                "units-rooms": "Unit",
+                "detail-card-date-label": "Rincian Tanggal",
+                "detail-card-past-status": "SUDAH LEWAT",
+                "kpi-sold-kamar-unit": "Kamar",
+                "no-data-calendar": "Tampilan Kalender Dinonaktifkan",
+                "no-data-calendar-sub": 'Penyaringan "Semua Bulan" aktif. Silakan pilih bulan spesifik pada filter di atas untuk menampilkan grid visual kalender.',
+                "no-table-data": "Tidak ada data yang cocok dengan kriteria filter."
+            },
+            EN: {
+                "header-title-sub": "Live Room Monitoring System & Calendar Visual Analytics",
+                "last-updated": "No data yet",
+                "auto-refresh-label": "Auto (60s)",
+                "refresh-btn": "Refresh",
+                "kpi-occupancy-label": "Average Occupancy",
+                "kpi-occupancy-sub": "Selected month & year",
+                "kpi-soldout-label": "Fully Booked (Sold Out)",
+                "kpi-soldout-sub": "Based on active year",
+                "kpi-sold-label": "Rooms Sold (Average)",
+                "kpi-sold-sub": "Rooms sold per day",
+                "filter-title": "Primary Filters",
+                "label-year": "Year:",
+                "label-month": "Month:",
+                "label-available": "Max Available Rooms (≤):",
+                "option-all-months": "All Months",
+                "reset-btn": "Reset Filters",
+                "soldout-panel-title": "Fully Booked (Active Year)",
+                "soldout-table-header-date": "Check-in / Date",
+                "soldout-table-header-occ": "Occupancy Ratio",
+                "soldout-table-footer": "*Recording dates with zero available rooms.",
+                "guide-title": "Navigation Guide",
+                "guide-li-1": "The calendar below highlights <strong>Today (July 10, 2026)</strong> with a glowing ring.",
+                "guide-li-2": "Past dates are styled with a translucent/dimmed background.",
+                "guide-li-3": "<strong>Cell Key:</strong> Green (&ge;4 safe rooms), Orange (1-3 limited), Red (Sold Out).",
+                "guide-li-4": "Click any date cell to show daily detailed insights in the bottom right panel.",
+                "guide-footer-left": "*Real-time Integration",
+                "calendar-title": "Available Rooms Calendar Visualization",
+                "calendar-legend-safe": "≥4 Rooms",
+                "calendar-legend-limited": "1-3 Rooms",
+                "calendar-legend-soldout": "Sold Out",
+                "calendar-legend-past": "Past",
+                "calendar-legend-today": "Today",
+                "table-title": "Filtered Room Occupancy Detailed Report",
+                "table-header-date": "Check-in / Date",
+                "table-header-cap": "Room Capacity",
+                "table-header-sold": "Rooms Sold",
+                "table-header-occ": "Occupancy Ratio",
+                "table-header-avail": "Available Rooms",
+                "detail-card-title": "Daily Detail Analysis",
+                "detail-card-status": "Selected",
+                "detail-card-empty-title": "Select Date on Calendar",
+                "detail-card-empty-desc": "Click any date on the calendar grid above to view daily sales performance details.",
+                "footer-text": "© 2026 Kaura Bali Resort. Integrated Independent Room Occupancy Dashboard & Monitor.",
+                "month-names": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+                "day-names": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+                "units-rooms": "Rooms",
+                "detail-card-date-label": "Date Details",
+                "detail-card-past-status": "PAST DATE",
+                "kpi-sold-kamar-unit": "Rooms",
+                "no-data-calendar": "Calendar Visualization Disabled",
+                "no-data-calendar-sub": '"All Months" filter is active. Please select a specific month to render the visual calendar grid.',
+                "no-table-data": "No transaction records match the filtered criteria."
+            }
+        };
+
+        function getLiveCSVUrl(url) {
+            let cleanUrl = url.trim();
+            if (cleanUrl.endsWith("/pubhtml")) {
+                return cleanUrl.replace(/\/pubhtml$/, "/pub?output=csv");
+            }
+            if (cleanUrl.includes("/pubhtml?")) {
+                return cleanUrl.split("/pubhtml?")[0] + "/pub?output=csv";
+            }
+            return cleanUrl;
+        }
+
+        const csvSourceUrl = getLiveCSVUrl(rawSourceUrl);
+        let rawDataset = [];
+        let parsedDataset = [];
+        let autoRefreshInterval = null;
+
+        function logDebug(message) {
+            const consoleBox = document.getElementById('debug-logs');
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            consoleBox.innerHTML += `<span class="text-slate-500">[${timeStr}]</span> ${message}<br>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        // Change Language Toggle ID <-> EN
+        function changeLanguage(lang) {
+            currentLang = lang;
+            
+            // UI Button Highlighting ID / EN
+            const btnId = document.getElementById('lang-btn-id');
+            const btnEn = document.getElementById('lang-btn-en');
+            const btnIdSm = document.getElementById('lang-btn-id-sm');
+            const btnEnSm = document.getElementById('lang-btn-en-sm');
+
+            if (lang === 'ID') {
+                [btnId, btnIdSm].forEach(b => b.className = "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all duration-300 bg-kaura-500 text-white shadow-sm");
+                [btnEn, btnEnSm].forEach(b => b.className = "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all duration-300 text-slate-400 hover:text-slate-600");
+            } else {
+                [btnEn, btnEnSm].forEach(b => b.className = "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all duration-300 bg-kaura-500 text-white shadow-sm");
+                [btnId, btnIdSm].forEach(b => b.className = "px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all duration-300 text-slate-400 hover:text-slate-600");
+            }
+
+            // Translate static elements
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) {
+                    el.innerHTML = i18n[currentLang][key];
+                }
+            });
+
+            // Re-render Dynamic Elements
+            updateDateText();
+            updateMonthSelectOptions();
+            renderCalendarHeader();
+            renderGuideList();
+            renderTableHead();
+            applyFilters();
+            resetDetailView();
+        }
+
+        // Format Dynamic Date (Jumat, 10 Juli 2026 / Friday, July 10, 2026)
+        function updateDateText() {
+            const daysID = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+            const daysEN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            
+            // Sesuai waktu sistem berjalan 10 Juli 2026 (Jumat/Friday)
+            const targetDayIndex = 5; // Friday
+            
+            let formatted = "";
+            if (currentLang === 'ID') {
+                formatted = `${daysID[targetDayIndex]}, 10 Juli 2026`;
+            } else {
+                formatted = `${daysEN[targetDayIndex]}, July 10, 2026`;
+            }
+            document.getElementById('header-date-text').textContent = formatted;
+        }
+
+        // Render Dropdown options dynamically with correct translations
+        function updateMonthSelectOptions() {
+            const select = document.getElementById('filter-month');
+            const selectedVal = select.value;
+            select.innerHTML = `<option value="">${i18n[currentLang]['option-all-months']}</option>`;
+            
+            const months = i18n[currentLang]['month-names'];
+            months.forEach((m, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx + 1;
+                opt.textContent = m;
+                if (selectedVal == (idx + 1).toString()) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            });
+        }
+
+        // Render Calendar Grid Header Days
+        function renderCalendarHeader() {
+            const container = document.getElementById('calendar-days-header');
+            container.innerHTML = '';
+            const dayLabels = i18n[currentLang]['day-names'];
+            dayLabels.forEach(day => {
+                const dayEl = document.createElement('div');
+                dayEl.textContent = day;
+                container.appendChild(dayEl);
+            });
+        }
+
+        // Render Navigation Guide Bullet Points
+        function renderGuideList() {
+            const container = document.getElementById('guide-list-ul');
+            container.innerHTML = `
+                <li>${i18n[currentLang]['guide-li-1']}</li>
+                <li>${i18n[currentLang]['guide-li-2']}</li>
+                <li>${i18n[currentLang]['guide-li-3']}</li>
+                <li>${i18n[currentLang]['guide-li-4']}</li>
+            `;
+        }
+
+        // Render Table Columns Header
+        function renderTableHead() {
+            const container = document.getElementById('table-head-row');
+            container.innerHTML = `
+                <tr>
+                    <th class="px-5 py-3.5 tracking-wider">${i18n[currentLang]['table-header-date']}</th>
+                    <th class="px-5 py-3.5 text-center tracking-wider">${i18n[currentLang]['table-header-cap']}</th>
+                    <th class="px-5 py-3.5 text-center tracking-wider">${i18n[currentLang]['table-header-sold']}</th>
+                    <th class="px-5 py-3.5 text-right tracking-wider">${i18n[currentLang]['table-header-occ']}</th>
+                    <th class="px-5 py-3.5 text-right tracking-wider">${i18n[currentLang]['table-header-avail']}</th>
+                </tr>
+            `;
+        }
+
+        // Reset Detail Daily Analysis Side Card
+        function resetDetailView() {
+            const detailContainer = document.getElementById('day-detail-content');
+            detailContainer.innerHTML = `
+                <div class="text-center py-10 text-slate-400 fade-in-card">
+                    <svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.303.197l-1.591 1.591M21 12h-2.25m-.197 5.303l-1.591-1.591M12 21.75V19.5m-5.303-.197l1.591-1.591M3 12h2.25m.197-5.303l1.591 1.591"></path>
+                    </svg>
+                    <p class="text-xs font-bold uppercase text-slate-400 tracking-wider">${i18n[currentLang]['detail-card-empty-title']}</p>
+                    <p class="text-[10px] text-slate-400 mt-1 font-semibold">${i18n[currentLang]['detail-card-empty-desc']}</p>
+                </div>
+            `;
+        }
+
+        window.onload = function() {
+            document.getElementById('debug-url').textContent = csvSourceUrl;
+            
+            // Atur default awal
+            document.getElementById('filter-year').value = TODAY_YEAR;
+            document.getElementById('filter-month').value = TODAY_MONTH.toString();
+            
+            // Jalankan inisialisasi bahasa & data
+            changeLanguage('ID');
+            
+            document.getElementById('auto-refresh-check').addEventListener('change', handleAutoRefreshToggle);
+            handleAutoRefreshToggle();
+        };
+
+        function handleAutoRefreshToggle() {
+            const isChecked = document.getElementById('auto-refresh-check').checked;
+            if (isChecked) {
+                if (!autoRefreshInterval) {
+                    autoRefreshInterval = setInterval(fetchData, 60000); // 60s Auto Update
+                }
+            } else {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+        }
+
+        function fetchData() {
+            updateSyncStatus("Menghubungkan...", "amber");
+            document.getElementById('error-banner').classList.add('hidden');
+            logDebug("Mengambil data Google Sheet...");
+
+            fetch(csvSourceUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
+                    return response.text();
+                })
+                .then(csvText => {
+                    logDebug("Sukses terhubung langsung dengan Google Sheets!");
+                    processCSVText(csvText);
+                })
+                .catch(err => {
+                    logDebug(`Koneksi langsung diblokir/gagal (${err.message}). Mengaktifkan jalur penyelamat (CORS Proxy)...`);
+                    const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(csvSourceUrl);
+                    fetch(proxyUrl)
+                        .then(response => {
+                            if (!response.ok) throw new Error(`Proxy status: ${response.status}`);
+                            return response.text();
+                        })
+                        .then(csvText => {
+                            logDebug("Koneksi via CORS Proxy berhasil melewati pembatasan keamanan browser!");
+                            processCSVText(csvText);
+                        })
+                        .catch(proxyErr => {
+                            logDebug(`Koneksi gagal total: ${proxyErr.message}`);
+                            showDataError("Gagal mengambil data dari Google Sheets. Pastikan spreadsheet Anda dipublikasikan secara publik ke web.");
+                        });
+                });
+        }
+
+        function processCSVText(csvText) {
+            Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.data && results.data.length > 0) {
+                        rawDataset = results.data;
+                        document.getElementById('debug-raw-rows').textContent = `${rawDataset.length} baris`;
+                        updateSyncStatus("Tersambung", "emerald");
+                        updateLastUpdated();
+                        parseDataset(results.meta.fields);
+                    } else {
+                        showDataError("Data kosong atau format Google Sheets tidak valid.");
+                    }
+                },
+                error: function(err) {
+                    showDataError("Gagal mem-parsing teks CSV.");
+                }
+            });
+        }
+
+        function showDataError(msg) {
+            updateSyncStatus("Error", "rose");
+            document.getElementById('error-banner').classList.remove('hidden');
+            document.getElementById('error-message').textContent = msg;
+        }
+
+        function updateSyncStatus(text, color) {
+            const badge = document.getElementById('sync-status');
+            let colorClasses = "bg-amber-100 text-amber-800";
+            let dotClass = "bg-amber-500";
+            
+            if (color === "emerald") {
+                colorClasses = "bg-emerald-100 text-emerald-800";
+                dotClass = "bg-emerald-600";
+            } else if (color === "rose") {
+                colorClasses = "bg-rose-100 text-rose-800";
+                dotClass = "bg-rose-600";
+            }
+            
+            badge.className = `inline-flex items-center px-2.5 py-1 rounded-full font-bold text-[9px] uppercase tracking-wider ${colorClasses}`;
+            badge.innerHTML = `
+                <span class="w-1.5 h-1.5 mr-1.5 rounded-full ${dotClass} ${color === 'amber' ? 'animate-pulse' : ''}"></span>
+                ${text}
+            `;
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            document.getElementById('last-updated').textContent = currentLang === 'ID' ? `Terakhir: ${timeStr}` : `Updated: ${timeStr}`;
+        }
+
+        function findColumn(headers, keywords, defaultIndex) {
+            const found = headers.find(h => {
+                const cleanH = h.replace(/^\uFEFF/, '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                return keywords.some(kw => {
+                    const cleanKw = kw.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                    return cleanH === cleanKw || cleanH.includes(cleanKw);
+                });
+            });
+
+            if (!found && headers.length > defaultIndex) {
+                return headers[defaultIndex];
+            }
+            return found;
+        }
+
+        function parseDataset(headers) {
+            const dateCol = findColumn(headers, ['tanggal', 'date', 'tgl', 'day', 'checkin'], 0);
+            const totalRoomCol = findColumn(headers, ['totalroom', 'totalrooms', 'total_room', 'total_rooms', 'kamar', 'total', 'capacity'], 1);
+            const roomSoldCol = findColumn(headers, ['roomsold', 'rooms_sold', 'room_sold', 'terjual', 'kamar_terjual', 'sold', 'occupied'], 2);
+
+            document.getElementById('debug-col-date').textContent = dateCol || "Tidak terdeteksi (Fallback)";
+            document.getElementById('debug-col-total').textContent = totalRoomCol || "Tidak terdeteksi (Fallback)";
+            document.getElementById('debug-col-sold').textContent = roomSoldCol || "Tidak terdeteksi (Fallback)";
+
+            parsedDataset = rawDataset.map((row, idx) => {
+                const rawDate = row[dateCol] || '';
+                let totalRoom = parseInt((row[totalRoomCol] || '0').toString().replace(/[^0-9]/g, ''), 10) || 0;
+                let roomSold = parseInt((row[roomSoldCol] || '0').toString().replace(/[^0-9]/g, ''), 10) || 0;
+
+                if (totalRoom === 0 && row['Total Room']) {
+                    totalRoom = parseInt(row['Total Room'], 10) || 0;
+                }
+
+                let day = null, month = null, year = null;
+                if (rawDate) {
+                    const cleanDate = rawDate.trim();
+                    const parts = cleanDate.split(/[-/.]/);
+                    if (parts.length === 3) {
+                        const p0 = parseInt(parts[0], 10);
+                        const p1 = parseInt(parts[1], 10);
+                        const p2 = parseInt(parts[2], 10);
+
+                        if (parts[2].length === 4) { // Format: DD/MM/YYYY
+                            day = p0;
+                            month = p1;
+                            year = p2;
+                        } else if (parts[0].length === 4) { // Format: YYYY-MM-DD
+                            year = p0;
+                            month = p1;
+                            day = p2;
+                        } else if (parts[2].length === 2) { // Format: DD/MM/YY
+                            day = p0;
+                            month = p1;
+                            year = 2000 + p2;
+                        }
+                    } else {
+                        const parsed = new Date(cleanDate);
+                        if (!isNaN(parsed.getTime())) {
+                            day = parsed.getDate();
+                            month = parsed.getMonth() + 1;
+                            year = parsed.getFullYear();
+                        }
+                    }
+                }
+
+                const occupancy = totalRoom > 0 ? (roomSold / totalRoom) * 100 : 0;
+                const available = totalRoom - roomSold;
+
+                return {
+                    id: idx,
+                    rawDate: rawDate.trim(),
+                    day,
+                    month,
+                    year,
+                    totalRoom,
+                    roomSold,
+                    occupancy,
+                    available
+                };
+            }).filter(item => item.rawDate && !isNaN(item.totalRoom));
+
+            const uniqueYearsInDataset = [...new Set(parsedDataset.map(item => item.year).filter(y => y !== null))];
+            document.getElementById('debug-years').textContent = uniqueYearsInDataset.join(', ') || "Kosong";
+
+            if (uniqueYearsInDataset.length > 0) {
+                const yearFilterInput = document.getElementById('filter-year');
+                const currentFilterVal = parseInt(yearFilterInput.value, 10);
+                if (isNaN(currentFilterVal) || !uniqueYearsInDataset.includes(currentFilterVal)) {
+                    const fallbackYear = uniqueYearsInDataset.includes(TODAY_YEAR) ? TODAY_YEAR : Math.max(...uniqueYearsInDataset);
+                    yearFilterInput.value = fallbackYear;
+                }
+            }
+
+            logDebug(`Selesai memproses dataset. Berhasil mengurai ${parsedDataset.length} baris data transaksi.`);
+            applyFilters();
+        }
+
+        // Fungsi Evaluasi Hubungan Hari (Past, Today, atau Future)
+        function getTemporalStatus(day, month, year) {
+            if (year < TODAY_YEAR) return "past";
+            if (year > TODAY_YEAR) return "future";
+            
+            // Jika tahun sama
+            if (month < TODAY_MONTH) return "past";
+            if (month > TODAY_MONTH) return "future";
+            
+            // Jika bulan sama
+            if (day < TODAY_DAY) return "past";
+            if (day > TODAY_DAY) return "future";
+            
+            return "today";
+        }
+
+        function renderCalendar(year, month, availableLimit) {
+            const calendarGrid = document.getElementById('calendar-grid');
+            const headerTitle = document.getElementById('calendar-header-title');
+            calendarGrid.innerHTML = '';
+
+            // Jika "Semua Bulan" dipilih, tampilkan penunjuk panduan
+            if (!month) {
+                headerTitle.innerHTML = i18n[currentLang]['calendar-title'];
+                calendarGrid.innerHTML = `
+                    <div class="col-span-7 text-center py-16 text-slate-400 font-bold text-xs">
+                        <div class="max-w-md mx-auto space-y-2 bg-kaura-50 p-6 rounded-3xl border border-kaura-100 shadow-inner">
+                            <svg class="w-8 h-8 text-kaura-500 mx-auto" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008z"></path>
+                            </svg>
+                            <p class="text-slate-700 font-extrabold text-sm">${i18n[currentLang]['no-data-calendar']}</p>
+                            <p class="text-[10px] text-slate-400 font-semibold leading-relaxed">${i18n[currentLang]['no-data-calendar-sub']}</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const months = i18n[currentLang]['month-names'];
+            headerTitle.innerHTML = `${i18n[currentLang]['calendar-title']} &mdash; ${months[month - 1]} ${year}`;
+
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            // Render sel kosong awal bulan
+            for (let i = 0; i < firstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = "bg-slate-50/50 border border-slate-100 rounded-2xl h-20 opacity-30";
+                calendarGrid.appendChild(emptyCell);
+            }
+
+            // Render tanggal aktif
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayData = parsedDataset.find(item => item.day === d && item.month == month && item.year == year);
+                const temporalStatus = getTemporalStatus(d, parseInt(month, 10), parseInt(year, 10));
+                
+                const cell = document.createElement('div');
+                cell.className = "border rounded-2xl h-20 p-2.5 flex flex-col justify-between transition-all duration-300 cursor-pointer relative group shadow-sm hover:shadow-md hover:-translate-y-0.5 ";
+
+                // Terapkan Highlight Hari Ini (10 Juli 2026)
+                if (temporalStatus === "today") {
+                    cell.className += "ring-4 ring-kaura-gold ring-offset-2 shadow-glow scale-[1.02] z-10 border-kaura-gold bg-amber-50/30 ";
+                }
+
+                if (dayData) {
+                    const sisaKamar = dayData.available;
+                    const limit = availableLimit ? parseInt(availableLimit, 10) : Infinity;
+                    const matchesLimitFilter = sisaKamar <= limit;
+
+                    if (!matchesLimitFilter) {
+                        cell.className += "bg-slate-100 border-slate-200 opacity-20 cursor-not-allowed pointer-events-none";
+                    } else if (temporalStatus === "past") {
+                        // Desain Khusus Tanggal Lampau (Washed out / Elegant Grayed)
+                        cell.className += "bg-slate-100/60 hover:bg-slate-100 border-slate-200 opacity-60 hover:opacity-100";
+                    } else {
+                        // Tanggal Hari Ini atau Masa Depan (Warna Penuh Soft)
+                        if (sisaKamar === 0) {
+                            cell.className += "bg-rose-50/80 hover:bg-rose-100/90 border-rose-200";
+                        } else if (sisaKamar >= 1 && sisaKamar <= 3) {
+                            cell.className += "bg-amber-50/80 hover:bg-amber-100/90 border-amber-200";
+                        } else {
+                            cell.className += "bg-emerald-50/80 hover:bg-emerald-100/90 border-emerald-200";
+                        }
+                    }
+
+                    // Tulis Teks Sel Tanggal
+                    let statusLabel = "";
+                    if (temporalStatus === "today") {
+                        statusLabel = `<span class="text-[7.5px] bg-kaura-gold text-white font-extrabold px-1.5 py-0.5 rounded-full animate-pulse uppercase tracking-wide">TODAY</span>`;
+                    } else if (temporalStatus === "past") {
+                        statusLabel = `<span class="text-[7.5px] text-slate-400 font-extrabold uppercase tracking-widest">${i18n[currentLang]['calendar-legend-past']}</span>`;
+                    }
+
+                    cell.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-black text-slate-800">${d}</span>
+                            ${statusLabel || `<span class="text-[8.5px] px-1 bg-white/90 rounded-md font-mono font-bold text-slate-400 border border-slate-100">${dayData.occupancy.toFixed(0)}%</span>`}
+                        </div>
+                        <div class="text-center pb-0.5">
+                            <span class="text-[9.5px] font-black tracking-wide uppercase px-2 py-0.5 rounded-lg ${
+                                sisaKamar === 0 ? 'bg-rose-200 text-rose-800' :
+                                sisaKamar <= 3 ? 'bg-amber-200 text-amber-800' : 'bg-emerald-200 text-emerald-800'
+                            } ${temporalStatus === "past" ? 'saturate-50' : ''}">
+                                ${sisaKamar} Sedia
+                            </span>
+                        </div>
+                    `;
+                    
+                    cell.onclick = () => showDayDetail(dayData, temporalStatus);
+
+                } else {
+                    // Sel tanpa data transaksi
+                    cell.className += "bg-slate-50/30 border-slate-150 text-slate-400 cursor-not-allowed";
+                    cell.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-300">${d}</span>
+                            ${temporalStatus === "today" ? `<span class="text-[8px] bg-kaura-gold text-white font-extrabold px-1.5 py-0.5 rounded-full">TODAY</span>` : ''}
+                        </div>
+                        <div class="text-center text-[9px] text-slate-300 italic pb-1">No Data</div>
+                    `;
+                }
+                
+                calendarGrid.appendChild(cell);
+            }
+        }
+
+        function showDayDetail(data, temporalStatus) {
+            const detailContainer = document.getElementById('day-detail-content');
+            const months = i18n[currentLang]['month-names'];
+            const formattedTitle = `${data.day} ${months[data.month - 1]} ${data.year}`;
+
+            let badgeColor = "bg-emerald-100 text-emerald-800";
+            if (data.available === 0) badgeColor = "bg-rose-100 text-rose-800";
+            else if (data.available <= 3) badgeColor = "bg-amber-100 text-amber-800";
+
+            let bannerTemporal = "";
+            if (temporalStatus === "today") {
+                bannerTemporal = `<span class="px-2.5 py-1 rounded-full text-[9px] font-bold bg-kaura-gold text-white animate-pulse tracking-wide uppercase">HARI INI</span>`;
+            } else if (temporalStatus === "past") {
+                bannerTemporal = `<span class="px-2.5 py-1 rounded-full text-[9px] font-bold bg-slate-200 text-slate-600 tracking-wide uppercase">${i18n[currentLang]['detail-card-past-status']}</span>`;
+            }
+
+            detailContainer.innerHTML = `
+                <div class="fade-in-card space-y-4">
+                    <div class="border-b border-slate-100 pb-3 flex justify-between items-start">
+                        <div>
+                            <p class="text-[9px] uppercase tracking-widest font-extrabold text-slate-400">${i18n[currentLang]['detail-card-date-label']}</p>
+                            <h4 class="text-base font-black text-slate-800 mt-1">${formattedTitle}</h4>
+                        </div>
+                        ${bannerTemporal}
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                            <p class="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">${i18n[currentLang]['table-header-cap']}</p>
+                            <p class="text-sm font-black text-slate-800 mt-1">${data.totalRoom} ${i18n[currentLang]['units-rooms']}</p>
+                        </div>
+                        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                            <p class="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">${i18n[currentLang]['table-header-sold']}</p>
+                            <p class="text-sm font-black text-slate-800 mt-1">${data.roomSold} ${i18n[currentLang]['units-rooms']}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-500">${i18n[currentLang]['table-header-avail']}</span>
+                            <span class="text-xs font-black px-3 py-1 rounded-full ${badgeColor}">${data.available} ${i18n[currentLang]['calendar-legend-past']}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-500">${i18n[currentLang]['table-header-occ']}</span>
+                            <span class="text-xs font-black text-kaura-700">${data.occupancy.toFixed(2).replace('.', ',')}%</span>
+                        </div>
+                    </div>
+
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-kaura-500 h-2 rounded-full transition-all duration-500" style="width: ${data.occupancy}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function applyFilters() {
+            const fYear = document.getElementById('filter-year').value.trim();
+            const fMonth = document.getElementById('filter-month').value;
+            const fAvailable = document.getElementById('filter-available').value.trim();
+
+            // 1. Ambil & Render data terfilter sesuai seluruh kriteria aktif
+            const filteredData = parsedDataset.filter(row => {
+                const matchYear = fYear === '' || row.year == fYear;
+                const matchMonth = fMonth === '' || row.month == fMonth;
+                const matchAvailable = fAvailable === '' || row.available <= parseInt(fAvailable, 10);
+
+                return matchYear && matchMonth && matchAvailable;
+            });
+
+            // 2. Ambil data Sold Out (hanya berdasarkan Tahun aktif secara mandiri)
+            const soldOutData = parsedDataset.filter(row => {
+                const matchYear = fYear === '' || row.year == fYear;
+                return matchYear && row.available === 0;
+            });
+
+            calculateKPIs(filteredData, soldOutData);
+
+            // Render komponen-komponen UI
+            renderCalendar(fYear, fMonth, fAvailable);
+            renderSoldOutTable(soldOutData);
+            renderFilteredTable(filteredData);
+        }
+
+        function calculateKPIs(filteredData, soldOutData) {
+            if (filteredData.length > 0) {
+                const totalOccupancy = filteredData.reduce((acc, curr) => acc + curr.occupancy, 0);
+                const avgOccupancy = totalOccupancy / filteredData.length;
+                document.getElementById('kpi-avg-occupancy').textContent = `${avgOccupancy.toFixed(1).replace('.', ',')}%`;
+
+                const totalSold = filteredData.reduce((acc, curr) => acc + curr.roomSold, 0);
+                const avgSold = totalSold / filteredData.length;
+                document.getElementById('kpi-avg-sold').textContent = `${avgSold.toFixed(1).replace('.', ',')} ${i18n[currentLang]['kpi-sold-kamar-unit']}`;
+            } else {
+                document.getElementById('kpi-avg-occupancy').textContent = "0%";
+                document.getElementById('kpi-avg-sold').textContent = `0 ${i18n[currentLang]['kpi-sold-kamar-unit']}`;
+            }
+
+            document.getElementById('kpi-soldout-days').textContent = `${soldOutData.length} ${currentLang === 'ID' ? 'Hari' : 'Days'}`;
+        }
+
+        function renderSoldOutTable(data) {
+            const tbody = document.getElementById('soldout-table-body');
+            document.getElementById('soldout-badge-count').textContent = `${data.length} ${currentLang === 'ID' ? 'Hari' : 'Days'}`;
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="2" class="px-5 py-8 text-center text-slate-400">
+                            Tidak ada tanggal sold out di tahun aktif ini.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-rose-50/50 transition duration-150 border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="px-5 py-3 font-mono font-bold text-slate-600">${row.rawDate}</td>
+                    <td class="px-5 py-3 text-right">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-[10px] font-extrabold uppercase tracking-wide">
+                            100% Occupancy
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderFilteredTable(data) {
+            const tbody = document.getElementById('filtered-table-body');
+            document.getElementById('filter-badge-count').textContent = `${data.length} ${currentLang === 'ID' ? 'Hari' : 'Days'}`;
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-5 py-16 text-center text-slate-400">
+                            <div class="flex flex-col items-center justify-center space-y-2">
+                                <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"></path>
+                                </svg>
+                                <span class="text-xs font-bold">${i18n[currentLang]['no-table-data']}</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                if (row.available === 0) {
+                    tr.className = "bg-rose-50/30 hover:bg-rose-50/60 transition duration-150 border-b border-slate-100";
+                } else {
+                    tr.className = "hover:bg-kaura-50/50 transition duration-150 border-b border-slate-100";
+                }
+                
+                tr.innerHTML = `
+                    <td class="px-5 py-3.5 font-mono font-bold text-slate-600">${row.rawDate}</td>
+                    <td class="px-5 py-3.5 text-center text-slate-400">${row.totalRoom}</td>
+                    <td class="px-5 py-3.5 text-center font-bold text-slate-700">${row.roomSold}</td>
+                    <td class="px-5 py-3.5 text-right font-extrabold ${row.occupancy >= 100 ? 'text-rose-600' : 'text-slate-800'}">
+                        ${row.occupancy.toFixed(2).replace('.', ',')}%
+                    </td>
+                    <td class="px-5 py-3.5 text-right font-extrabold">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-[10px] ${row.available === 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}">
+                            ${row.available} ${i18n[currentLang]['calendar-legend-past']}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
