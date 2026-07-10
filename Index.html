@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Keterisian Kamar - Kaura Bali</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        kaura: {
+                            50: '#F5F7F6', 100: '#E2EAE6', 200: '#C7D6CE', 500: '#527C67', 
+                            600: '#406351', 700: '#2E493C', 800: '#1B2C24', 900: '#0E1712', 
+                            gold: '#D4AF37', goldSoft: '#E6D7B8', sand: '#F7F5F0'
+                        }
+                    },
+                    boxShadow: {
+                        premium: '0 8px 30px -4px rgba(27, 44, 36, 0.04)',
+                        glow: '0 0 20px rgba(212, 175, 55, 0.25)',
+                        cardHover: '0 20px 40px -10px rgba(27, 44, 36, 0.08)'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-kaura-sand text-slate-700 font-sans min-h-screen flex flex-col antialiased">
+
+    <header class="bg-white/95 backdrop-blur-md text-slate-800 py-4 px-6 sticky top-0 z-50 border-b border-kaura-100 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-lg font-extrabold text-kaura-800">KAURA BALI | OCCUPANCY HUB</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="sync-status" class="px-2 py-1 rounded-full bg-amber-100 text-[9px] font-bold uppercase">Connecting...</span>
+                <button onclick="fetchData()" class="bg-kaura-500 text-white px-3 py-1 rounded-xl text-xs font-bold">Refresh</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+        <div id="error-banner" class="hidden bg-rose-50 border border-rose-200 text-rose-800 px-5 py-4 rounded-3xl">
+            <p id="error-message"></p>
+        </div>
+        
+        <div id="debug-logs" class="bg-black text-emerald-400 p-4 rounded-xl text-[10px] font-mono h-32 overflow-y-auto"></div>
+    </main>
+
+    <script>
+        // Arahkan URL ke endpoint internal Vercel (Aman dari intipan)
+        const csvSourceUrl = "/api/get-rooms"; 
+
+        let rawDataset = [];
+        let parsedDataset = [];
+        let autoRefreshInterval = null;
+
+        function logDebug(message) {
+            const consoleBox = document.getElementById('debug-logs');
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            consoleBox.innerHTML += `<span class="text-slate-500">[${timeStr}]</span> ${message}<br>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+
+        // --- Tambahkan fungsi lainnya (changeLanguage, updateDateText, dll) di sini ---
+
+        function fetchData() {
+            updateSyncStatus("Menghubungkan...", "amber");
+            document.getElementById('error-banner').classList.add('hidden');
+            logDebug("Mengambil data aman via Vercel Serverless Function...");
+
+            fetch(csvSourceUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
+                    return response.json();
+                })
+                .then(jsonData => {
+                    logDebug("Sukses mengambil data JSON aman dari Vercel Endpoint!");
+                    processJSONData(jsonData);
+                })
+                .catch(err => {
+                    logDebug(`Koneksi Gagal: ${err.message}`);
+                    showDataError("Gagal mengambil data dari server perantara Vercel. Pastikan Environment Variable di Vercel sudah benar.");
+                });
+        }
+
+        function processJSONData(sheetData) {
+            if (sheetData && sheetData.length > 1) {
+                const headers = sheetData[0];
+                const rows = sheetData.slice(1);
+
+                rawDataset = rows.map(row => {
+                    let obj = {};
+                    headers.forEach((header, index) => {
+                        obj[header] = row[index];
+                    });
+                    return obj;
+                });
+
+                document.getElementById('debug-raw-rows').textContent = `${rawDataset.length} baris`;
+                updateSyncStatus("Tersambung", "emerald");
+                updateLastUpdated();
+                // Pastikan fungsi parseDataset Anda ada di bawah ini untuk mengolah rawDataset
+                parseDataset(headers);
+            } else {
+                showDataError("Struktur data JSON dari Google Sheets tidak valid atau kosong.");
+            }
+        }
+        
+        // Panggil fetchData saat halaman dimuat
+        window.onload = fetchData;
+    </script>
+</body>
+</html>
